@@ -17,11 +17,11 @@ class DQNAgent:
 
         # Reduce the learning rate
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)  # Start with a small learning rate
-        self.memory = deque(maxlen=10000)
+        self.memory = deque(maxlen=15000)
         self.gamma = 0.99
         self.epsilon = 1.0
         self.epsilon_min = 0.1
-        self.epsilon_decay = 0.9995  # Adjusted for per-episode decay
+        self.epsilon_decay = 0.9997  # Adjusted for per-episode decay
         self.batch_size = 64
         self.update_target_frequency = 5
 
