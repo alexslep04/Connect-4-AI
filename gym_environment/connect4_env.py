@@ -3,18 +3,15 @@ from gym import spaces
 import numpy as np
 from pygame_ui.connect4_game import Connect4Game  # Ensure this path is correct
 
-
 class Connect4Env:
     def __init__(self):
-        # Initialize other variables
-        self.invalid_actions = 0
+        # Initialize the game
         self.game = Connect4Game()  # Instantiate the Connect4Game class
 
     def reset(self):
         """
         Reset the game to start a new episode.
         """
-        self.invalid_actions = 0  # Reset the invalid action counter for each new episode
         self.game = Connect4Game()  # Re-initialize the game for a new episode
         return self.game.board
 
@@ -23,15 +20,10 @@ class Connect4Env:
         Take an action in the game (drop a token in a column).
         Returns:
         - Next state (the updated board)
-        - Reward (1 for winning, -1 for losing, 0 otherwise)
+        - Reward (+10 for winning, -10 for losing, 0 otherwise)
         - done (True if the game is over, False otherwise)
         - info (optional, empty for now)
         """
-        # If no valid action (signal from DQN agent), treat this as a draw and end the episode
-        if action is None:
-            print("No valid actions left. The game is a draw.")
-            return self.game.board, 0, True, {}  # Reward is 0 for a draw, and the game ends
-
         # Apply the action (drop a token in the selected column)
         self.game.drop_token(action)
 
@@ -42,3 +34,11 @@ class Connect4Env:
 
         # If the game is still ongoing, return the updated board and neutral reward
         return self.game.board, 0, False, {}
+
+    def render(self, mode='human'):
+        """Render the current state of the game using Pygame."""
+        self.game.render()
+
+    def close(self):
+        """Close the environment (not much needed here)."""
+        pass
