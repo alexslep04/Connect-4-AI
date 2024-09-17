@@ -1,0 +1,5 @@
+pygame          # For game interface and graphics
+numpy          # For numerical computations, particularly for handling the game board
+torch          # PyTorch for building and training the AI model
+gymnasium      # OpenAI Gymnasium for the custom reinforcement learning environment
+matplotlib     # For visualizing training progress (optional)
