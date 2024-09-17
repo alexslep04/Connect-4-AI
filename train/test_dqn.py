@@ -12,3 +12,10 @@ plt.title('Test Plot')
 
 # Show the plot
 plt.show()
+
+
+
+
+
+
+#THIS FILE WAS USED TO TEST THE PLOT NOT NECCESSARY
