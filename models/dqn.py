@@ -1,19 +1,18 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 class DQN(nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
-        
-        # Input layer: 6x7 grid (for Connect 4 board)
-        self.fc1 = nn.Linear(6 * 7, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, 7)  # Output 7 values (one for each column)
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
+        self.fc1 = nn.Linear(64 * 2 * 1, 128)  # Adjust the dimensions based on your conv output
+        self.fc2 = nn.Linear(128, 7)  # Output Q-values for each column
 
     def forward(self, x):
-        # Flatten the input: (batch_size, 6, 7) -> (batch_size, 6 * 7)
-        x = x.view(x.size(0), -1)
+        x = x.view(-1, 1, 6, 7)  # Reshape input to [batch_size, channels, height, width]
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = x.view(x.size(0), -1)  # Flatten the tensor
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)  # Output is Q-values for each column
+        return self.fc2(x)

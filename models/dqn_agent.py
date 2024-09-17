@@ -8,17 +8,22 @@ from models.dqn import DQN  # Ensure that DQN is correctly implemented
 
 class DQNAgent:
     def __init__(self):
-        self.model = DQN()  # Initialize your DQN model
-        self.target_model = DQN()  # Initialize target model for stable updates
-        self.optimizer = optim.Adam(self.model.parameters())  # Adam optimizer
-        self.memory = deque(maxlen=10000)  # Experience replay buffer
-        self.gamma = 0.99  # Discount factor for future rewards
-        self.epsilon = 1.0  # Initial exploration rate
-        self.epsilon_min = 0.1  # Minimum exploration rate
-        self.epsilon_decay = 0.99999  # Exploration decay rate (set for 10,000 episodes)
-        self.batch_size = 64  # Mini-batch size for training
-        self.update_target_frequency = 10  # Update target model every 10 episodes
-    
+        # Set up the device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Initialize your DQN models
+        self.model = DQN().to(self.device)
+        self.target_model = DQN().to(self.device)
+
+        self.optimizer = optim.Adam(self.model.parameters())
+        self.memory = deque(maxlen=10000)
+        self.gamma = 0.99
+        self.epsilon = 1.0
+        self.epsilon_min = 0.1
+        self.epsilon_decay = 0.99999
+        self.batch_size = 64
+        self.update_target_frequency = 10
+        
     def remember(self, state, action, reward, next_state, done):
         # Save experience in the replay buffer
         self.memory.append((state, action, reward, next_state, done))
@@ -26,32 +31,38 @@ class DQNAgent:
     def act(self, state):
         """
         Choose an action based on epsilon-greedy policy.
-        If random number <= epsilon, choose random action (explore),
-        otherwise choose greedy action from model (exploit).
         """
         # Get a list of valid actions (columns that are not full)
         valid_actions = [c for c in range(7) if state[0][c] == 0]  # Ensure column is not full
 
-        if len(valid_actions) == 0:
-            # No valid actions: Return a signal to indicate a draw (end the episode)
-            return None  # This signals that no more valid actions are available
+        if not valid_actions:
+            # No valid actions: Return a signal to indicate the episode should end
+            return None  # Signals that no more valid actions are available
 
         if np.random.rand() <= self.epsilon:
             # Explore: Choose a random valid action
             return random.choice(valid_actions)
-    
-        # Exploit: Choose the best action (greedy)
-        state = torch.FloatTensor(state.flatten()).unsqueeze(0)  # Convert state to tensor
-        q_values = self.model(state)  # Predict Q-values
-    
-        # Filter Q-values to consider only valid actions
-        q_values_np = q_values.detach().cpu().numpy().flatten()
-        valid_q_values = np.array([q_values_np[c] for c in valid_actions])
-    
-        # Get the action corresponding to the highest valid Q-value
-        best_action = valid_actions[np.argmax(valid_q_values)]
-    
-        return best_action
+        else:
+            # Exploit: Choose the best action (greedy)
+            # Convert state to a tensor and move it to the appropriate device
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)  # Shape: [1, 6, 7]
+
+            # Get Q-values from the model
+            with torch.no_grad():
+                q_values = self.model(state_tensor)  # Output shape: [1, 7]
+
+            # Convert Q-values to a numpy array
+            q_values_np = q_values.cpu().numpy()[0]  # Shape: [7]
+
+            # Mask invalid actions by setting their Q-values to a very low value
+            masked_q_values = np.full(q_values_np.shape, -np.inf)
+            for action in valid_actions:
+                masked_q_values[action] = q_values_np[action]
+
+            # Select the action with the highest Q-value among valid actions
+            best_action = int(np.argmax(masked_q_values))
+
+            return best_action
 
     def replay(self):
         """
@@ -62,29 +73,33 @@ class DQNAgent:
 
         # Randomly sample minibatch from memory
         minibatch = random.sample(self.memory, self.batch_size)
+        # Unpack the minibatch
+        states, actions, rewards, next_states, dones = zip(*minibatch)
 
-        for state, action, reward, next_state, done in minibatch:
-            # Flatten the state and next_state before feeding into the model
-            state = torch.FloatTensor(state.flatten()).unsqueeze(0)  # Convert to 1D tensor
-            next_state = torch.FloatTensor(next_state.flatten()).unsqueeze(0)
+        # Convert to tensors and move to the appropriate device
+        states = torch.FloatTensor(np.array(states)).to(self.device)
+        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
+        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
+        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
+        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
-            # Compute target Q-value
-            target = reward
-            if not done:
-                target = reward + self.gamma * torch.max(self.target_model(next_state)).item()
+        # Compute current Q-values for the actions taken
+        q_values = self.model(states).gather(1, actions)  # Shape: [batch_size, 1]
 
-            # Get current Q-values for the state
-            q_values = self.model(state)
+        # Compute next Q-values using the target network
+        with torch.no_grad():
+            next_q_values = self.target_model(next_states).max(1)[0].unsqueeze(1)  # Shape: [batch_size, 1]
 
-            # Clone the Q-values so we can modify the specific action's Q-value
-            target_f = q_values.clone()
-            target_f[0][action] = target  # Set the target Q-value for the specific action
+        # Compute target Q-values
+        target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
 
-            # Perform gradient descent
-            self.optimizer.zero_grad()
-            loss = nn.MSELoss()(q_values, target_f)
-            loss.backward()
-            self.optimizer.step()
+        # Compute loss
+        loss = nn.MSELoss()(q_values, target_q_values)
+
+        # Perform gradient descent
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         # Decay epsilon after each replay step
         self.update_epsilon()

@@ -15,7 +15,7 @@ def smooth_rewards(rewards, window=10):
     return smoothed
 
 if __name__ == "__main__":
-    env = Connect4Env()  # Initialize the environment
+    env = Connect4Env(render_mode=False)  # Initialize the environment
     agent = DQNAgent()  # Initialize the agent
     episodes = 10000  # Set the number of episodes for training
 

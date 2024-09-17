@@ -12,24 +12,31 @@ RED = (255, 0, 0)  # Color for Player 1
 YELLOW = (255, 255, 0)  # Color for Player 2
 
 class Connect4Game:
-    def __init__(self):
+    def __init__(self, render_mode=False):
+        self.render_mode = render_mode
         self.board = np.zeros((ROW_COUNT, COLUMN_COUNT), dtype=int)
         self.current_player = 1
-        self.game_over = False  # Initialize game over flag
-        pygame.init()
-        self.width = COLUMN_COUNT * SQUARE_SIZE
-        self.height = (ROW_COUNT + 1) * SQUARE_SIZE  # Extra row for the top
-        self.size = (self.width, self.height)
-        self.screen = pygame.display.set_mode(self.size)
-        
-        # Fonts for displaying text
-        self.myfont = pygame.font.SysFont("monospace", 75)
-        
-        # Set up the display window
-        pygame.display.set_caption("Connect 4")
-        
-        # Draw the initial board when the game starts
-        self.draw_board()
+        self.game_over = False
+
+        if self.render_mode:
+            pygame.init()
+            # Initialize rendering components
+            self.width = COLUMN_COUNT * SQUARE_SIZE
+            self.height = (ROW_COUNT + 1) * SQUARE_SIZE
+            self.size = (self.width, self.height)
+            self.screen = pygame.display.set_mode(self.size)
+            pygame.display.set_caption("Connect 4")
+            self.draw_board()
+
+    # Update other methods accordingly
+    def render(self):
+        if self.render_mode:
+            # Rendering code goes here
+            pass  # Replace with your rendering implementation
+
+    def close(self):
+        if self.render_mode:
+            pygame.quit()
 
     def drop_token(self, col):
         """
@@ -56,32 +63,34 @@ class Connect4Game:
         Check whether the current player has won by forming four consecutive tokens vertically,
         horizontally, or diagonally.
         """
+        board = self.board
+
         # Check horizontal locations for a win
         for r in range(ROW_COUNT):
             for c in range(COLUMN_COUNT - 3):
-                if self.board[r][c] == player and self.board[r][c+1] == player and \
-                   self.board[r][c+2] == player and self.board[r][c+3] == player:
+                if (board[r][c] == player and board[r][c+1] == player and
+                    board[r][c+2] == player and board[r][c+3] == player):
                     return True
 
         # Check vertical locations for a win
         for c in range(COLUMN_COUNT):
             for r in range(ROW_COUNT - 3):
-                if self.board[r][c] == player and self.board[r+1][c] == player and \
-                   self.board[r+2][c] == player and self.board[r+3][c] == player:
+                if (board[r][c] == player and board[r+1][c] == player and
+                    board[r+2][c] == player and board[r+3][c] == player):
                     return True
 
         # Check positively sloped diagonals
         for r in range(ROW_COUNT - 3):
             for c in range(COLUMN_COUNT - 3):
-                if self.board[r][c] == player and self.board[r+1][c+1] == player and \
-                   self.board[r+2][c+2] == player and self.board[r+3][c+3] == player:
+                if (board[r][c] == player and board[r+1][c+1] == player and
+                    board[r+2][c+2] == player and board[r+3][c+3] == player):
                     return True
 
         # Check negatively sloped diagonals
         for r in range(3, ROW_COUNT):
             for c in range(COLUMN_COUNT - 3):
-                if self.board[r][c] == player and self.board[r-1][c+1] == player and \
-                   self.board[r-2][c+2] == player and self.board[r-3][c+3] == player:
+                if (board[r][c] == player and board[r-1][c+1] == player and
+                    board[r-2][c+2] == player and board[r-3][c+3] == player):
                     return True
 
         return False  # No winning condition found
@@ -95,21 +104,30 @@ class Connect4Game:
                 return r
         raise ValueError("Column is full!")  # This should not be reached if properly checked
 
-    def render(self):
-        for c in range(COLUMN_COUNT):
-            for r in range(ROW_COUNT):
-                # Draw the blue board
-                pygame.draw.rect(self.screen, BLUE, (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
-                # Draw the empty or filled circles for the tokens
-                if self.board[r][c] == 0:
-                    pygame.draw.circle(self.screen, BLACK, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
-                elif self.board[r][c] == 1:
-                    pygame.draw.circle(self.screen, RED, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
-                else:
-                    pygame.draw.circle(self.screen, YELLOW, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
+    def is_board_full(self):
+        """Check if the board is full."""
+        return np.all(self.board != 0)
 
-        # Update the display
-        pygame.display.update()
+    def get_valid_actions(self):
+        """Return a list of columns that are not full."""
+        return [c for c in range(COLUMN_COUNT) if self.board[0][c] == 0]
+
+    def render(self):
+        if self.render_mode:
+            for c in range(COLUMN_COUNT):
+                for r in range(ROW_COUNT):
+                    # Draw the blue board
+                    pygame.draw.rect(self.screen, BLUE, (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+                    # Draw the empty or filled circles for the tokens
+                    if self.board[r][c] == 0:
+                        pygame.draw.circle(self.screen, BLACK, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
+                    elif self.board[r][c] == 1:
+                        pygame.draw.circle(self.screen, RED, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
+                    else:
+                        pygame.draw.circle(self.screen, YELLOW, (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)), RADIUS)
+
+            # Update the display
+            pygame.display.update()
 
     def draw_board(self):
         # Draw the Connect 4 board in Pygame (this will be called during initialization)

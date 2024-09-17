@@ -4,3 +4,4 @@ torch          # PyTorch for building and training the AI model
 gymnasium      # OpenAI Gymnasium for the custom reinforcement learning environment
 matplotlib     # For visualizing training progress (optional)
 gym
+random
