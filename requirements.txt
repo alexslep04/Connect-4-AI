@@ -3,3 +3,4 @@ numpy          # For numerical computations, particularly for handling the game 
 torch          # PyTorch for building and training the AI model
 gymnasium      # OpenAI Gymnasium for the custom reinforcement learning environment
 matplotlib     # For visualizing training progress (optional)
+gym
