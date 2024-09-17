@@ -24,32 +24,48 @@ class DQNAgent:
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
-        # Filter out invalid actions (columns that are already full)
-        valid_actions = [c for c in range(7) if state[0][c] == 0]
+        """
+        Choose an action based on epsilon-greedy policy.
+        If random number <= epsilon, choose random action (explore),
+        otherwise choose greedy action from model (exploit).
+        """
+        # Get a list of valid actions (columns that are not full)
+        valid_actions = [c for c in range(7) if state[0][c] == 0]  # Ensure column is not full
+
         if len(valid_actions) == 0:
-            return None  # No valid actions left
+            # No valid actions: Return a signal to indicate a draw (end the episode)
+            return None  # This signals that no more valid actions are available
 
-        # Epsilon-greedy action selection
         if np.random.rand() <= self.epsilon:
-            return random.choice(valid_actions)  # Explore: choose a random valid action
-
-        # Otherwise, predict the best action (exploit)
-        state_tensor = torch.FloatTensor(state.flatten()).unsqueeze(0)
-        q_values = self.model(state_tensor).detach().cpu().numpy().flatten()
-
-        # Mask out invalid actions by setting them to a very low value
-        q_values[~np.isin(range(7), valid_actions)] = -np.inf
-
-        return np.argmax(q_values)  # Return the best action
+            # Explore: Choose a random valid action
+            return random.choice(valid_actions)
+    
+        # Exploit: Choose the best action (greedy)
+        state = torch.FloatTensor(state.flatten()).unsqueeze(0)  # Convert state to tensor
+        q_values = self.model(state)  # Predict Q-values
+    
+        # Filter Q-values to consider only valid actions
+        q_values_np = q_values.detach().cpu().numpy().flatten()
+        valid_q_values = np.array([q_values_np[c] for c in valid_actions])
+    
+        # Get the action corresponding to the highest valid Q-value
+        best_action = valid_actions[np.argmax(valid_q_values)]
+    
+        return best_action
 
     def replay(self):
-        # Ensure enough memory is stored to train
+        """
+        Sample random minibatch from memory, compute Q-values, and perform gradient descent.
+        """
         if len(self.memory) < self.batch_size:
             return
 
+        # Randomly sample minibatch from memory
         minibatch = random.sample(self.memory, self.batch_size)
+
         for state, action, reward, next_state, done in minibatch:
-            state = torch.FloatTensor(state.flatten()).unsqueeze(0)
+            # Flatten the state and next_state before feeding into the model
+            state = torch.FloatTensor(state.flatten()).unsqueeze(0)  # Convert to 1D tensor
             next_state = torch.FloatTensor(next_state.flatten()).unsqueeze(0)
 
             # Compute target Q-value
@@ -57,19 +73,30 @@ class DQNAgent:
             if not done:
                 target = reward + self.gamma * torch.max(self.target_model(next_state)).item()
 
+            # Get current Q-values for the state
             q_values = self.model(state)
-            target_f = q_values.clone()
-            target_f[0][action] = target
 
-            # Backpropagation of loss
+            # Clone the Q-values so we can modify the specific action's Q-value
+            target_f = q_values.clone()
+            target_f[0][action] = target  # Set the target Q-value for the specific action
+
+            # Perform gradient descent
             self.optimizer.zero_grad()
             loss = nn.MSELoss()(q_values, target_f)
             loss.backward()
             self.optimizer.step()
 
         # Decay epsilon after each replay step
+        self.update_epsilon()
+
+    def update_epsilon(self):
+        """
+        Decay the exploration rate (epsilon) after each episode, ensuring it doesn't fall below the minimum value.
+        """
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_min  # Ensure epsilon does not fall below minimum value
 
     def update_target_model(self):
         # Copy weights from model to target model for stability
