@@ -15,73 +15,77 @@ class DQNAgent:
         self.model = DQN().to(self.device)
         self.target_model = DQN().to(self.device)
 
-        self.optimizer = optim.Adam(self.model.parameters())
+        # Reduce the learning rate
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)  # Start with a small learning rate
         self.memory = deque(maxlen=10000)
         self.gamma = 0.99
         self.epsilon = 1.0
         self.epsilon_min = 0.1
-        self.epsilon_decay = 0.99999
+        self.epsilon_decay = 0.9995  # Adjusted for per-episode decay
         self.batch_size = 64
-        self.update_target_frequency = 10
-        
+        self.update_target_frequency = 5
+
+        # Initialize loss history for tracking
+        self.loss_history = []
+
     def remember(self, state, action, reward, next_state, done):
         # Save experience in the replay buffer
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state):
+    def act(self, state, evaluate=False):
         """
         Choose an action based on epsilon-greedy policy.
+        If 'evaluate' is True, the agent acts greedily (epsilon=0).
         """
         # Get a list of valid actions (columns that are not full)
-        valid_actions = [c for c in range(7) if state[0][c] == 0]  # Ensure column is not full
+        valid_actions = [c for c in range(7) if state[0][c] == 0]
 
         if not valid_actions:
-            # No valid actions: Return a signal to indicate the episode should end
-            return None  # Signals that no more valid actions are available
+            # No valid actions: Return None to indicate the episode should end
+            return None
 
-        if np.random.rand() <= self.epsilon:
+        # Set epsilon to 0 during evaluation to act greedily
+        epsilon = 0.0 if evaluate else self.epsilon
+
+        if np.random.rand() <= epsilon:
             # Explore: Choose a random valid action
             return random.choice(valid_actions)
         else:
-            # Exploit: Choose the best action (greedy)
-            # Convert state to a tensor and move it to the appropriate device
+            # Exploit: Choose the best action
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)  # Shape: [1, 6, 7]
 
-            # Get Q-values from the model
             with torch.no_grad():
                 q_values = self.model(state_tensor)  # Output shape: [1, 7]
 
-            # Convert Q-values to a numpy array
             q_values_np = q_values.cpu().numpy()[0]  # Shape: [7]
 
-            # Mask invalid actions by setting their Q-values to a very low value
+            # Mask invalid actions by setting their Q-values to negative infinity
             masked_q_values = np.full(q_values_np.shape, -np.inf)
             for action in valid_actions:
                 masked_q_values[action] = q_values_np[action]
 
-            # Select the action with the highest Q-value among valid actions
             best_action = int(np.argmax(masked_q_values))
-
             return best_action
 
     def replay(self):
         """
-        Sample random minibatch from memory, compute Q-values, and perform gradient descent.
+        Sample a minibatch from memory, compute Q-values, and perform gradient descent.
+        Returns the loss value for tracking.
         """
         if len(self.memory) < self.batch_size:
-            return
+            print(f"Skipping replay: Not enough samples in memory (only {len(self.memory)})")
+            return None  # Not enough samples to train
 
         # Randomly sample minibatch from memory
         minibatch = random.sample(self.memory, self.batch_size)
-        # Unpack the minibatch
         states, actions, rewards, next_states, dones = zip(*minibatch)
 
         # Convert to tensors and move to the appropriate device
-        states = torch.FloatTensor(np.array(states)).to(self.device)
-        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
-        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
-        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
-        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
+        states = torch.FloatTensor(np.array(states)).to(self.device)         # Shape: [batch_size, 6, 7]
+        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)     # Shape: [batch_size, 1]
+        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)    # Shape: [batch_size, 1]
+        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)  # Shape: [batch_size, 6, 7]
+        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)        # Shape: [batch_size, 1]
 
         # Compute current Q-values for the actions taken
         q_values = self.model(states).gather(1, actions)  # Shape: [batch_size, 1]
@@ -90,19 +94,30 @@ class DQNAgent:
         with torch.no_grad():
             next_q_values = self.target_model(next_states).max(1)[0].unsqueeze(1)  # Shape: [batch_size, 1]
 
-        # Compute target Q-values
-        target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+        # Set next_q_values to 0 for terminal states (when done is True)
+        next_q_values = next_q_values * (1 - dones)
 
-        # Compute loss
-        loss = nn.MSELoss()(q_values, target_q_values)
+        # Compute target Q-values
+        target_q_values = rewards + (self.gamma * next_q_values)
+
+        # Use Huber loss (Smooth L1) to compute loss instead of MSE
+        loss = nn.SmoothL1Loss()(q_values, target_q_values)
 
         # Perform gradient descent
         self.optimizer.zero_grad()
         loss.backward()
+
+        # Apply gradient clipping to avoid exploding gradients
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
         self.optimizer.step()
 
-        # Decay epsilon after each replay step
-        self.update_epsilon()
+        # Store loss in history
+        self.loss_history.append(loss.item())
+
+        # Return loss value for tracking
+        return loss.item()
+
 
     def update_epsilon(self):
         """
@@ -111,8 +126,8 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         else:
-            self.epsilon = self.epsilon_min  # Ensure epsilon does not fall below minimum value
+            self.epsilon = self.epsilon_min
 
     def update_target_model(self):
-        # Copy weights from model to target model for stability
+        # Copy weights from the main model to the target model
         self.target_model.load_state_dict(self.model.state_dict())

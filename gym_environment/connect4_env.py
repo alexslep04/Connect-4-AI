@@ -48,7 +48,7 @@ class Connect4Env(gym.Env):
 
         # Check if the agent has won
         if self.game.check_win(agent_player):
-            reward = 10  # Agent wins
+            reward = 1  # Agent wins
             done = True
             return np.copy(self.game.board), reward, done, {}
 
@@ -67,7 +67,7 @@ class Connect4Env(gym.Env):
 
             # Check if the opponent has won
             if self.game.check_win(opponent_player):
-                reward = -10  # Agent loses
+                reward = -1  # Agent loses
                 done = True
                 return np.copy(self.game.board), reward, done, {}
 
