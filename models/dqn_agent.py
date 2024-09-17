@@ -11,7 +11,7 @@ class DQNAgent:
         self.model = DQN()  # Initialize your DQN model
         self.target_model = DQN()  # Initialize target model for stable updates
         self.optimizer = optim.Adam(self.model.parameters())  # Adam optimizer
-        self.memory = deque(maxlen=2000)  # Experience replay buffer
+        self.memory = deque(maxlen=10000)  # Experience replay buffer
         self.gamma = 0.99  # Discount factor for future rewards
         self.epsilon = 1.0  # Initial exploration rate
         self.epsilon_min = 0.1  # Minimum exploration rate
