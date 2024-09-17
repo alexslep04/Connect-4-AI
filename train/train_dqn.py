@@ -17,7 +17,7 @@ def smooth_rewards(rewards, window=10):
 if __name__ == "__main__":
     env = Connect4Env()  # Initialize the environment
     agent = DQNAgent()  # Initialize the agent
-    episodes = 10  # Set the number of episodes for training
+    episodes = 1000  # Set the number of episodes for training
 
     all_rewards = []  # To store total rewards for each episode
     dqn_wins = 0  # Track DQN agent wins
