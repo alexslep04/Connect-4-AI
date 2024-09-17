@@ -27,7 +27,10 @@ class Connect4Env:
         - done (True if the game is over, False otherwise)
         - info (optional, empty for now)
         """
-        # No need to check for invalid actions here since the agent only selects valid actions
+        # If no valid action (signal from DQN agent), treat this as a draw and end the episode
+        if action is None:
+            print("No valid actions left. The game is a draw.")
+            return self.game.board, 0, True, {}  # Reward is 0 for a draw, and the game ends
 
         # Apply the action (drop a token in the selected column)
         self.game.drop_token(action)
@@ -39,18 +42,3 @@ class Connect4Env:
 
         # If the game is still ongoing, return the updated board and neutral reward
         return self.game.board, 0, False, {}
-
-
-    def get_invalid_actions(self):
-        """
-        Return the number of invalid actions in the current episode.
-        """
-        return self.invalid_actions
-
-    def render(self, mode='human'):
-        """Render the current state of the game using Pygame."""
-        self.game.render()
-
-    def close(self):
-        """Close the environment (not much needed here)."""
-        pass

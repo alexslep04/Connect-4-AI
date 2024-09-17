@@ -39,23 +39,33 @@ if __name__ == "__main__":
         state = env.reset()  # Reset the environment at the start of each episode
         done = False
         total_reward = 0  # Track the total reward for this episode
+        invalid_actions = 0  # Track the number of invalid actions in the episode
 
-    while not done:
-        action = agent.act(state)  # Agent chooses action
-        next_state, reward, done, _ = env.step(action)  # Take action in the environment
+        # While the episode is still ongoing
+        while not done:
+            action = agent.act(state)  # Agent chooses action
+            next_state, reward, done, _ = env.step(action)  # Take action in the environment
 
-        agent.remember(state, action, reward, next_state, done)  # Store experience
-        agent.replay()  # Train on a minibatch from memory
+            # Check if the action was invalid and count it (optional, depending on your logic)
+            if reward == -0.5:
+                invalid_actions += 1
 
-        state = next_state  # Move to the next state
-        total_reward += reward  # Accumulate total reward
+            agent.remember(state, action, reward, next_state, done)  # Store experience
+            agent.replay()  # Train on a minibatch from memory
 
-    # Log the total reward for the episode
-    print(f"Episode {e}/{episodes} - Epsilon: {agent.epsilon:.4f}, Total Reward: {total_reward}")
+            state = next_state  # Move to the next state
+            total_reward += reward  # Accumulate total reward
 
-    # Update the target model every few episodes for stability
-    if e % agent.update_target_frequency == 0:
-        agent.update_target_model()
+        # Log the total reward for the episode
+        print(f"Episode {e}/{episodes} - Epsilon: {agent.epsilon:.4f}, Total Reward: {total_reward}")
+
+        # Store the total reward and invalid actions for the episode
+        all_rewards.append(total_reward)
+        all_invalid_actions.append(invalid_actions)
+
+        # Update the target model every few episodes for stability
+        if e % agent.update_target_frequency == 0:
+            agent.update_target_model()
 
         # Smooth the rewards for plotting
         smoothed_rewards = smooth_rewards(all_rewards, window)

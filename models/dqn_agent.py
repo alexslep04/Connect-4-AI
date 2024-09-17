@@ -33,7 +33,11 @@ class DQNAgent:
         """
         # Get a list of valid actions (columns that are not full)
         valid_actions = [c for c in range(7) if state[0][c] == 0]  # Ensure column is not full
-    
+
+        if len(valid_actions) == 0:
+            # No valid actions: Return a signal to indicate a draw (end the episode)
+            return None  # This signals that no more valid actions are available
+
         if np.random.rand() <= self.epsilon:
             # Explore: Choose a random valid action
             return random.choice(valid_actions)
@@ -42,9 +46,12 @@ class DQNAgent:
         state = torch.FloatTensor(state.flatten()).unsqueeze(0)  # Convert state to tensor
         q_values = self.model(state)  # Predict Q-values
     
-        # Choose the action with the highest Q-value, but only among valid actions
+        # Filter Q-values to consider only valid actions
         q_values_np = q_values.detach().cpu().numpy().flatten()
-        best_action = valid_actions[np.argmax(q_values_np[valid_actions])]
+        valid_q_values = np.array([q_values_np[c] for c in valid_actions])
+    
+        # Get the action corresponding to the highest valid Q-value
+        best_action = valid_actions[np.argmax(valid_q_values)]
     
         return best_action
 
@@ -52,29 +59,33 @@ class DQNAgent:
     def replay(self):
         """
         Sample random minibatch from memory, compute Q-values, and perform gradient descent.
+        Implements Double DQN where we use the primary model to select actions,
+        but the target model to compute the target Q-value.
         """
         if len(self.memory) < self.batch_size:
             return
 
-        # Randomly sample minibatch from memory
         minibatch = random.sample(self.memory, self.batch_size)
-        
-        # Iterate through each sample in the minibatch
+
         for state, action, reward, next_state, done in minibatch:
             state = torch.FloatTensor(state.flatten()).unsqueeze(0)
             next_state = torch.FloatTensor(next_state.flatten()).unsqueeze(0)
 
-            # Compute target Q-value
-            target = reward
-            if not done:
-                target = reward + self.gamma * torch.max(self.target_model(next_state)).item()
-
-            # Get current Q-values for the state
+            # Predict Q-values for current state
             q_values = self.model(state)
 
-            # Clone the Q-values so we can modify the specific action's Q-value
+            # Calculate target Q-value using Double DQN
+            with torch.no_grad():
+                if done:
+                    target = reward
+                else:
+                    # Double DQN: Use the primary model to select action, but use target model to estimate Q-value
+                    best_action_next = torch.argmax(self.model(next_state)).item()
+                    target = reward + self.gamma * self.target_model(next_state)[0][best_action_next].item()
+
+            # Clone Q-values and update the action with the target Q-value
             target_f = q_values.clone()
-            target_f[0][action] = target  # Set the target Q-value for the specific action
+            target_f[0][action] = target
 
             # Perform gradient descent
             self.optimizer.zero_grad()
@@ -85,12 +96,16 @@ class DQNAgent:
         # Decay epsilon after each replay step
         self.update_epsilon()
 
+
     def update_epsilon(self):
         """
         Decay the exploration rate (epsilon) after each episode.
+        Apply epsilon-annealing for more dynamic exploration.
         """
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_min  # Stop decaying once it reaches the minimum value
 
     def update_target_model(self):
         """
