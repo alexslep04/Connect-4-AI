@@ -15,7 +15,7 @@ class DQNAgent:
         self.gamma = 0.99  # Discount factor for future rewards
         self.epsilon = 1.0  # Initial exploration rate
         self.epsilon_min = 0.1  # Minimum exploration rate
-        self.epsilon_decay = 0.9995  # Exploration decay rate
+        self.epsilon_decay = 0.99974  # Exploration decay rate
         self.batch_size = 64  # Mini-batch size for training
         self.update_target_frequency = 10  # Update target model every 10 episodes
     
