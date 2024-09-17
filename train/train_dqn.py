@@ -37,74 +37,84 @@ if __name__ == "__main__":
 
     window = 10  # Moving average window size for rewards
     
-    for e in range(episodes):
-        state = env.reset()  # Reset the environment at the start of each episode
-        done = False
-        total_reward = 0  # Track the total reward for this episode
-        dqn_win = False  # Track whether the DQN agent won
-        player_win = None  # Track who wins each episode (Player 1 or Player 2)
+    # Initialize global cumulative reward
+cumulative_total_reward = 0  # Tracks rewards across all episodes
 
-        # While the episode is still ongoing
-        while not done:
-            action = agent.act(state)  # Agent chooses action
-            next_state, reward, done, _ = env.step(action)  # Take action in the environment
+for e in range(episodes):
+    state = env.reset()  # Reset the environment at the start of each episode
+    done = False
+    total_reward = 0  # Track the total reward for this episode
+    dqn_win = False  # Track whether the DQN agent won
+    player_win = None  # Track who wins each episode (Player 1 or Player 2)
 
-            reward = float(reward)  # Ensure 'reward' is scalar before checking
+    # While the episode is still ongoing
+    while not done:
+        action = agent.act(state)  # Agent chooses action
+        next_state, reward, done, _ = env.step(action)  # Take action in the environment
 
-            # Accumulate total reward
-            total_reward += reward
+        reward = float(reward)  # Ensure 'reward' is scalar before checking
 
-            # Track who won
-            if reward == 10:  # Player 2 (DQN agent) wins
-                dqn_win = True
-                player_win = 2
-            elif reward == -10:  # Player 1 wins
-                player_win = 1
+        # Accumulate total reward for this episode (either +10 or -10 for Connect 4)
+        total_reward += reward
 
-            # Store experience and train the agent
-            agent.remember(state, action, reward, next_state, done)
-            agent.replay()
+        # Track who won
+        if reward == 10:  # Player 2 (DQN agent) wins
+            dqn_win = True
+            player_win = 2
+        elif reward == -10:  # Player 1 wins
+            player_win = 1
 
-            # Move to the next state
-            state = next_state
+        # Store experience and train the agent
+        agent.remember(state, action, reward, next_state, done)
+        agent.replay()
 
-        # Track win rate
-        if dqn_win:
-            dqn_wins += 1
-        if player_win == 1:
-            player1_wins += 1
-        elif player_win == 2:
-            player2_wins += 1
+        # Move to the next state
+        state = next_state
 
-        # Calculate win rate
-        win_rate = dqn_wins / (e + 1)
+    # Accumulate the reward over all episodes (cumulative tracking)
+    cumulative_total_reward += total_reward
 
-        # Log the total reward, win rate, and epsilon for the episode
-        print(f"Episode {e}/{episodes} - Epsilon: {agent.epsilon:.4f}, Total Reward: {total_reward}, "
-              f"Win Rate: {win_rate:.2f}, Player {player_win} wins!")
+    # Track win rate
+    if dqn_win:
+        dqn_wins += 1
+    if player_win == 1:
+        player1_wins += 1
+    elif player_win == 2:
+        player2_wins += 1
 
-        # Store the total reward for the episode
-        all_rewards.append(total_reward)
+    # Calculate win rate
+    win_rate = dqn_wins / (e + 1)
 
-        # Update the target model every few episodes for stability
-        if e % agent.update_target_frequency == 0:
-            agent.update_target_model()
+    # Log the total reward, win rate, cumulative reward, and epsilon for the episode
+    print(f"Episode {e + 1}/{episodes} - Epsilon: {agent.epsilon:.4f}, "
+          f"Episode Reward: {total_reward}, "
+          f"Cumulative Total Reward: {cumulative_total_reward}, "
+          f"Win Rate: {win_rate:.2f}, Player {player_win} wins!")
 
-        # Smooth the rewards for plotting
-        smoothed_rewards = smooth_rewards(all_rewards, window)
+    # Store the total reward for the episode
+    all_rewards.append(total_reward)
 
-        # Dynamically adjust x-axis to the number of episodes processed so far
-        ax.set_xlim(0, len(all_rewards))
+    # Update the target model every few episodes for stability
+    if e % agent.update_target_frequency == 0:
+        agent.update_target_model()
 
-        # Update the plot data
-        line_rewards.set_xdata(range(len(smoothed_rewards)))
-        line_rewards.set_ydata(smoothed_rewards)
+    # Smooth the rewards for plotting
+    smoothed_rewards = smooth_rewards(all_rewards, window)
 
-        # Update the plot title with win rate and epsilon
-        ax.set_title(f'Total Reward per Episode\nWin Rate: {win_rate:.2f} | Epsilon: {agent.epsilon:.4f}')
+    # Dynamically adjust x-axis to the number of episodes processed so far
+    ax.set_xlim(0, len(all_rewards))
 
-        plt.draw()
-        plt.pause(0.01)  # Short pause to allow updates to be visible
+    # Update the plot data
+    line_rewards.set_xdata(range(len(smoothed_rewards)))
+    line_rewards.set_ydata(smoothed_rewards)
+
+    # Update the plot title with win rate, epsilon, and cumulative reward
+    ax.set_title(f'Total Reward per Episode\nWin Rate: {win_rate:.2f} | Epsilon: {agent.epsilon:.4f} | '
+                 f'Cumulative Reward: {cumulative_total_reward}')
+
+    plt.draw()
+    plt.pause(0.01)  # Short pause to allow updates to be visible
+
 
 # Final report on wins
 print(f"\nFinal Results after {episodes} episodes:")
