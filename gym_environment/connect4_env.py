@@ -25,15 +25,21 @@ class Connect4Env:
         - info (optional, empty for now)
         """
         # Apply the action (drop a token in the selected column)
-        self.game.drop_token(action)
+        try:
+            self.game.drop_token(action)  # Ensure valid actions are taken
+        except ValueError:
+            # Penalize the agent if it tries to drop a token in a full column, but don't end the game
+            return np.copy(self.game.board), -1, False, {}
 
         # Check if the game is over (win/loss condition)
         if self.game.game_over:
+            # Reward based on whether the AI (Player 2) wins
             reward = 10 if self.game.current_player == 2 else -10  # AI wins: +10, AI loses: -10
-            return self.game.board, reward, True, {}
+            return np.copy(self.game.board), reward, True, {}  # Return final board state, reward, and 'done' flag
 
         # If the game is still ongoing, return the updated board and neutral reward
-        return self.game.board, 0, False, {}
+        return np.copy(self.game.board), 0, False, {}  # Return the current board, neutral reward, and 'done' as False
+
 
     def render(self, mode='human'):
         """Render the current state of the game using Pygame."""
