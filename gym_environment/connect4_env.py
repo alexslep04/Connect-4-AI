@@ -36,7 +36,7 @@ class Connect4Env(gym.Env):
         # Check if the column is full (invalid action)
         if self.game.board[0][action] != 0:
             print(f"Invalid action in column {action}. Giving penalty.")
-            return self.game.board, -10, True, {}  # Penalize agent for choosing a full column
+            return self.game.board, -1, True, {}  # Penalize agent for choosing a full column
     
         # Apply the action (drop a token in the selected column)
         self.game.drop_token(action)
@@ -44,7 +44,7 @@ class Connect4Env(gym.Env):
         # Check if the game is over
         if self.game.game_over:
             # Assign rewards based on which player won (in Connect 4, the current player is switched after each move)
-            reward = 1 if self.game.current_player == 2 else -1  # Player 2 (AI) gets positive reward if they won
+            reward = 10 if self.game.current_player == 2 else -10  # Player 2 (AI) gets positive reward if they won
             return self.game.board, reward, True, {}  # Return the board, reward, and done flag
     
         # If the game is still ongoing, no immediate reward

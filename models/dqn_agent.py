@@ -15,7 +15,7 @@ class DQNAgent:
         self.gamma = 0.99  # Discount factor
         self.epsilon = 1.0  # Exploration rate
         self.epsilon_min = 0.1
-        self.epsilon_decay = 0.999
+        self.epsilon_decay = 0.9995
         self.batch_size = 64
         self.update_target_frequency = 10  # Update target network every 10 episodes
     
