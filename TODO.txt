@@ -2,6 +2,8 @@ add logging of training loss per episode after agent reached lowest epsilon valu
 
 implement way to save agent's game knowledge
 
+add to the main function a simple interface where the user can choose what they want to do (watch model train/ play against it)
+
 revise and make way for player to go against a player
 
 add way for player to play against an agent
