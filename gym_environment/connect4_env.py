@@ -54,7 +54,7 @@ class Connect4Env(gym.Env):
 
         # Check for a draw
         if self.game.is_board_full():
-            reward = 0  # Draw
+            reward = -0.2  # Draw
             done = True
             return np.copy(self.game.board), reward, done, {}
 

@@ -208,6 +208,11 @@ print(f"Player 1 (Opponent) Wins: {player1_wins}")
 print(f"Player 2 (DQN Agent) Wins: {player2_wins}")
 print(f"DQN Win Rate: {win_rate:.2f}")
 
+# Save the model after training
+model_save_path = 'dqn_model_no_draws.pth'  # Specify your desired path
+torch.save(agent.model.state_dict(), model_save_path)
+print(f"Model saved to {model_save_path}")
+
 # Plot evaluation win rates
 plt.plot(evaluation_episodes, evaluation_win_rates, marker='o')
 plt.xlabel('Episode')
