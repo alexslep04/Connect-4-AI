@@ -1,0 +1,10 @@
+add logging of training loss per episode after agent reached lowest epsilon value
+
+implement way to save agent's game knowledge
+
+revise and make way for player to go against a player
+
+add way for player to play against an agent
+	 - when player chooses to go against an agent give them the ability to choose which agent
+
+add way to visually see agents play against other agents with differing trainings (maybe base it off the average reward post training)

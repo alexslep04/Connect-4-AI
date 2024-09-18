@@ -33,7 +33,7 @@ def evaluate_agent(agent, env, episodes=100):
             next_state, reward, done, _ = env.step(action)
             state = next_state
         total_rewards.append(reward)
-        if reward == 10:
+        if reward == 1:
             wins += 1
 
     agent.epsilon = agent_epsilon_backup  # Restore the original epsilon
@@ -44,7 +44,7 @@ def evaluate_agent(agent, env, episodes=100):
 if __name__ == "__main__":
     env = Connect4Env(render_mode=False)  # Initialize the environment
     agent = DQNAgent()  # Initialize the agent
-    episodes = 10000  # Set the number of episodes for training
+    episodes = 15000  # Set the number of episodes for training
 
     all_rewards = []  # To store total rewards for each episode
     all_losses = []   # To store loss values
