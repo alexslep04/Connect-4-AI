@@ -7,7 +7,7 @@ import torch  # Add torch import if not already present
 import time   # For tracking training time
 
 # Enable interactive mode for live plotting
-plt.ion()
+# plt.ion()
 
 # Function to smooth rewards using a moving average
 def smooth_rewards(rewards, window=10):
@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
     # Start training
 start_time = time.time()
+log_loss = False
 for e in range(episodes):
     state = env.reset()  # Reset the environment at the start of each episode
     done = False
@@ -116,9 +117,10 @@ for e in range(episodes):
         loss = agent.replay()  # Capture the loss value
         if loss is not None:
             episode_losses.append(loss)
-            print(f"Loss for episode {e + 1}: {loss}")
-        else:
-            print(f"Replay buffer size: {len(agent.memory)}/{agent.batch_size}")
+            
+            if agent.epsilon == agent.epsilon_min:
+                log_loss = True  # Start logging
+                print(f"Loss for episode {e + 1}: {loss}")
 
 
 
@@ -207,7 +209,6 @@ print(f"Player 2 (DQN Agent) Wins: {player2_wins}")
 print(f"DQN Win Rate: {win_rate:.2f}")
 
 # Plot evaluation win rates
-plt.figure()
 plt.plot(evaluation_episodes, evaluation_win_rates, marker='o')
 plt.xlabel('Episode')
 plt.ylabel('Evaluation Win Rate')
