@@ -4,6 +4,7 @@ import numpy as np
 import pygame  # Import pygame if you're using it in this file
 from pygame_ui.connect4_game import Connect4Game
 import random
+from pygame_ui.connect4_game import COLUMN_COUNT, ROW_COUNT
 
 class Connect4Env(gym.Env):
     def __init__(self, render_mode=False):
@@ -38,13 +39,7 @@ class Connect4Env(gym.Env):
         """
         # Agent's move (Player 2)
         agent_player = self.game.current_player  # Should be Player 2 (the agent)
-        try:
-            self.game.drop_token(action)
-        except ValueError:
-            # Penalize the agent for invalid moves
-            reward = -5
-            done = False
-            return np.copy(self.game.board), reward, done, {}
+        self.game.drop_token(action)
 
         # Check if the agent has won
         if self.game.check_win(agent_player):
@@ -71,6 +66,12 @@ class Connect4Env(gym.Env):
                 done = True
                 return np.copy(self.game.board), reward, done, {}
 
+            # Check if the opponent has three in a row (horizontally or vertically) but hasn't won yet
+            if self.opponent_has_three_in_a_row():  # Implement this check
+                reward = -0.1  # Penalize the agent for not blocking
+            else:
+                reward = 0  # No penalty if blocking wasn't needed
+
             # Check for a draw after opponent's move
             if self.game.is_board_full():
                 reward = 0  # Draw
@@ -83,7 +84,6 @@ class Connect4Env(gym.Env):
             return np.copy(self.game.board), reward, done, {}
 
         # Continue the game
-        reward = 0
         done = False
         return np.copy(self.game.board), reward, done, {}
 
@@ -91,6 +91,28 @@ class Connect4Env(gym.Env):
         # Render the game state if rendering is enabled
         if self.render_mode:
             self.game.render()
+
+    def opponent_has_three_in_a_row(self):
+        """
+        Check if Player 1 (opponent) has three pieces in a row horizontally or vertically.
+        If true, it indicates the agent (Player 2) should block this.
+        """
+        # Access the game board
+        board = self.game.board
+
+        # Check horizontal three in a row for Player 1 (opponent)
+        for r in range(ROW_COUNT):
+            for c in range(COLUMN_COUNT - 3):
+                if board[r][c] == 1 and board[r][c+1] == 1 and board[r][c+2] == 1 and board[r][c+3] == 0:
+                    return True
+
+        # Check vertical three in a row for Player 1 (opponent)
+        for c in range(COLUMN_COUNT):
+            for r in range(ROW_COUNT - 3):
+                if board[r][c] == 1 and board[r+1][c] == 1 and board[r+2][c] == 1 and board[r+3][c] == 0:
+                    return True
+
+        return False  # No blockable three-in-a-row found for Player 1 (opponent)
 
     def close(self):
         # Close the game environment and clean up resources

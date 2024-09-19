@@ -209,7 +209,7 @@ print(f"Player 2 (DQN Agent) Wins: {player2_wins}")
 print(f"DQN Win Rate: {win_rate:.2f}")
 
 # Save the model after training
-model_save_path = 'dqn_model_50k.pth'  # Specify your desired path
+model_save_path = 'dqn_model_50k_updated.pth'  # Specify your desired path
 torch.save(agent.model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 

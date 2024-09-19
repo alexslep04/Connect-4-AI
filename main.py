@@ -28,7 +28,7 @@ def human_vs_agent():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load the trained DQN agent model
-    model_path = 'dqn_model_50k.pth'  # Update with your model path if different
+    model_path = 'dqn_model_50k_updated.pth'  # Update with your model path if different
     model = load_model(model_path, device)
 
     env = Connect4Env(render_mode=True)  # Enable rendering for visualization
