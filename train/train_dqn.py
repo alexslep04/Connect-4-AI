@@ -44,7 +44,7 @@ def evaluate_agent(agent, env, episodes=100):
 if __name__ == "__main__":
     env = Connect4Env(render_mode=False)  # Initialize the environment
     agent = DQNAgent()  # Initialize the agent
-    episodes = 15000  # Set the number of episodes for training
+    episodes = 50000  # Set the number of episodes for training
 
     all_rewards = []  # To store total rewards for each episode
     all_losses = []   # To store loss values
@@ -209,7 +209,7 @@ print(f"Player 2 (DQN Agent) Wins: {player2_wins}")
 print(f"DQN Win Rate: {win_rate:.2f}")
 
 # Save the model after training
-model_save_path = 'dqn_model_no_draws.pth'  # Specify your desired path
+model_save_path = 'dqn_model_50k.pth'  # Specify your desired path
 torch.save(agent.model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 
