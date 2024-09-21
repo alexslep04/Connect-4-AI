@@ -33,7 +33,7 @@ class Connect4Env(gym.Env):
         Take an action in the game (drop a token in a column).
         Returns:
         - Next state (the updated board)
-        - Reward (+10 for winning, -10 for losing, 0 otherwise)
+        - Reward (+1 for winning, -1 for losing, +0.1 for blocking, -0.1 for not blocking, -0.2 for a draw, 0 otherwise)
         - done (True if the game is over, False otherwise)
         - info (optional, empty for now)
         """
@@ -53,6 +53,12 @@ class Connect4Env(gym.Env):
             done = True
             return np.copy(self.game.board), reward, done, {}
 
+        # Check if the agent blocked the opponent's three-in-a-row before the opponent makes their move
+        if self.opponent_has_three_in_a_row():  # This function should check for potential three-in-a-row
+            reward = 0.1  # Reward for blocking
+        else:
+            reward = 0  # No reward or penalty yet
+
         # Opponent's move (Player 1)
         opponent_player = self.game.current_player  # Now it's Player 1's turn
         valid_actions = self.game.get_valid_actions()
@@ -68,18 +74,18 @@ class Connect4Env(gym.Env):
 
             # Check if the opponent has three in a row (horizontally or vertically) but hasn't won yet
             if self.opponent_has_three_in_a_row():  # Implement this check
-                reward = -0.1  # Penalize the agent for not blocking
+                reward -= 0.1  # Penalize the agent for not blocking
             else:
                 reward = 0  # No penalty if blocking wasn't needed
 
             # Check for a draw after opponent's move
             if self.game.is_board_full():
-                reward = 0  # Draw
+                reward = -0.2  # Draw
                 done = True
                 return np.copy(self.game.board), reward, done, {}
         else:
             # No valid actions left; it's a draw
-            reward = 0
+            reward = -0.2
             done = True
             return np.copy(self.game.board), reward, done, {}
 

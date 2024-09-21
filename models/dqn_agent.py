@@ -14,14 +14,14 @@ class DQNAgent:
         # Initialize your DQN models
         self.model = DQN().to(self.device)
         self.target_model = DQN().to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-6)  # Start with a small learning rate
-        self.memory = deque(maxlen=60000)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-5)  # Start with a small learning rate
+        self.memory = deque(maxlen=600000)
         self.gamma = 0.99
         self.epsilon = 1.0
         self.epsilon_min = 0.1
-        self.epsilon_decay = 0.99994  # Adjusted for per-episode decay
+        self.epsilon_decay = 0.9999944  # Adjusted for per-episode decay
         self.batch_size = 128
-        self.update_target_frequency = 10
+        self.update_target_frequency = 50
 
         # Initialize loss history for tracking
         self.loss_history = []
